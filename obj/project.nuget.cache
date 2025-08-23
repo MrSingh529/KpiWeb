@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "dgSpecHash": "cjx0x4Vc01o=",
+  "success": true,
+  "projectFilePath": "/Users/praveen18kumar/KpiWeb/KpiWeb.csproj",
+  "expectedPackageFiles": [
+    "/Users/praveen18kumar/.nuget/packages/csvhelper/33.1.0/csvhelper.33.1.0.nupkg.sha512",
+    "/Users/praveen18kumar/.nuget/packages/microsoft.data.sqlite/9.0.8/microsoft.data.sqlite.9.0.8.nupkg.sha512",
+    "/Users/praveen18kumar/.nuget/packages/microsoft.data.sqlite.core/9.0.8/microsoft.data.sqlite.core.9.0.8.nupkg.sha512",
+    "/Users/praveen18kumar/.nuget/packages/sqlitepclraw.bundle_e_sqlite3/2.1.10/sqlitepclraw.bundle_e_sqlite3.2.1.10.nupkg.sha512",
+    "/Users/praveen18kumar/.nuget/packages/sqlitepclraw.core/2.1.10/sqlitepclraw.core.2.1.10.nupkg.sha512",
+    "/Users/praveen18kumar/.nuget/packages/sqlitepclraw.lib.e_sqlite3/2.1.10/sqlitepclraw.lib.e_sqlite3.2.1.10.nupkg.sha512",
+    "/Users/praveen18kumar/.nuget/packages/sqlitepclraw.provider.e_sqlite3/2.1.10/sqlitepclraw.provider.e_sqlite3.2.1.10.nupkg.sha512",
+    "/Users/praveen18kumar/.nuget/packages/system.memory/4.5.3/system.memory.4.5.3.nupkg.sha512"
+  ],
+  "logs": []
+}

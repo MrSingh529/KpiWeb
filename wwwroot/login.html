@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login - RV Solutions Telecom Project Data Center</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="logo-inner.png" />
+  <style>
+    /* Center page container */
+    body, html {
+      height: 100%;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+    }
+    .login-container {
+      text-align: center;
+      padding: 20px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      max-width: 350px;
+      width: 100%;
+    }
+    #login-logo {
+      max-width: 200px;
+      margin-bottom: 15px;
+    }
+    #login-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 25px;
+      color: var(--text);
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    input {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    button {
+      background: linear-gradient(135deg, #16a34a, #4ade80);
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #051016;
+      font-size: 1rem;
+      transition: filter 0.2s ease;
+    }
+    button:hover {
+      filter: brightness(1.1);
+    }
+    #login-error {
+      color: var(--error);
+      font-weight: 600;
+      margin-top: 10px;
+      min-height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container" role="main">
+    <img src="logo-inner.png" alt="RV Solutions Logo" id="login-logo" />
+    <div id="login-title">Telecom Project Data Center</div>
+    <form id="login-form" aria-label="Login Form" novalidate>
+      <input type="text" id="username" autocomplete="username" placeholder="Username" required />
+      <input type="password" id="password" autocomplete="current-password" placeholder="Password" required />
+      <button type="submit">Login</button>
+      <div id="login-error" role="alert" aria-live="assertive"></div>
+    </form>
+  </div>
+
+  <script>
+  // Redirect if already logged in
+  if (sessionStorage.getItem('isLoggedIn') === 'true') {
+    window.location.href = 'index.html';
+  }
+
+  const form = document.getElementById('login-form');
+  const errorDiv = document.getElementById('login-error');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    errorDiv.textContent = '';
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    (async () => {
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (!response.ok) {
+          errorDiv.textContent = 'Invalid username or password.';
+          return;
+        }
+
+        const data = await response.json();
+        if (data.ok) {
+          sessionStorage.setItem('isLoggedIn', 'true');
+          sessionStorage.setItem('isAdmin', data.isAdmin ? 'true' : 'false');
+          window.location.href = 'index.html';
+        } else {
+          errorDiv.textContent = 'Invalid username or password.';
+        }
+      } catch (error) {
+        errorDiv.textContent = 'Login failed. Please try again later.';
+      }
+    })();
+  });
+</script>
+
+</body>
+</html>

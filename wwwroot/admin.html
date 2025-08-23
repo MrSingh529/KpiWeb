@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>User Management - Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <h1 style="text-align: center; margin: 0 0 20px 0; font-size: 2em; font-weight: 600;">User Management</h1>
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+      <button id="backBtn" style="padding:10px 18px; border:none; border-radius:8px; background:#10b981; color:white; font-weight:600; cursor:pointer;">
+        Back to Dashboard
+      </button>
+      <input type="text" id="searchUsername" placeholder="Search by Username"
+        style="flex:1; min-width:200px; padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <input type="text" id="searchIsAdmin" placeholder="Search by Is Admin (true/false)"
+        style="flex:1; min-width:200px; padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <button id="searchBtn" style="padding:10px 16px; border:none; border-radius:8px; background:#10b981; color:white; font-weight:600; cursor:pointer;">
+        Search
+      </button>
+      <button id="clearBtn" style="padding:10px 16px; border:none; border-radius:8px; background:#14b8a6; color:white; font-weight:600; cursor:pointer;">
+        Clear
+      </button>
+      <button id="addUserBtn" style="padding:10px 18px; border:none; border-radius:8px; background:#2563eb; color:white; font-weight:600; cursor:pointer;">
+        Add New User
+      </button>
+      <button id="showAllUsersBtn" style="background:#4ade80; color:black; padding:10px 16px; border:none; border-radius:8px; cursor:pointer;">
+  Show All Users
+</button>
+
+    </div>
+    <div id="searchError" style="color: red; margin-bottom: 8px;"></div>
+    <!-- User search result area -->
+    <div id="userList" style="margin-top: 12px;"></div>
+  </div>
+
+  <!-- Add User Modal -->
+  <div id="addUserModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="add-user-card">
+        <h2>Add New User</h2>
+        <form id="addUserForm">
+          <div class="form-group">
+            <label for="usernameInput">Username</label>
+            <input id="usernameInput" name="Username" type="text" required />
+          </div>
+          <div class="form-group">
+            <label for="passwordInput">Password</label>
+            <input id="passwordInput" name="Password" type="password" required />
+          </div>
+          <div class="form-group checkbox-group">
+            <input id="isAdminInput" name="IsAdmin" type="checkbox" />
+            <label for="isAdminInput">Is Admin</label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn create">Create</button>
+            <button type="button" id="cancelAddUserBtn" class="btn cancel">Cancel</button>
+          </div>
+        </form>
+        <div id="addUserMessage" style="margin-top: 10px; font-size: 14px; color: red;"></div>
+      </div>
+    </div>
+  </div>
+
+  
+  <script>
+    // Back button to dashboard
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    // Show add user modal
+    const addUserBtn = document.getElementById('addUserBtn');
+    const addUserModal = document.getElementById('addUserModal');
+    const cancelAddUserBtn = document.getElementById('cancelAddUserBtn');
+    const addUserForm = document.getElementById('addUserForm');
+    const addUserMessage = document.getElementById('addUserMessage');
+
+    addUserBtn.addEventListener('click', () => {
+      addUserModal.style.display = 'block';
+      addUserMessage.textContent = '';
+      addUserForm.reset();
+    });
+
+    cancelAddUserBtn.addEventListener('click', () => {
+      addUserModal.style.display = 'none';
+      addUserMessage.textContent = '';
+    });
+
+    // Submit add user form (NO user list auto-refresh here!)
+    addUserForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      addUserMessage.style.color = 'red';
+      addUserMessage.textContent = '';
+
+      const username = addUserForm.Username.value.trim();
+      const password = addUserForm.Password.value;
+      const isAdmin = addUserForm.IsAdmin.checked;
+
+      if (!username || !password) {
+        addUserMessage.textContent = 'Username and password are required.';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/users/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, isAdmin })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          addUserMessage.style.color = 'green';
+          addUserMessage.innerHTML = `
+            User created successfully!<br>
+            <b>Username:</b> ${username}<br>
+            <b>Is Admin:</b> ${isAdmin}<br>
+            (Password hidden for security)
+          `;
+          addUserForm.reset();
+          // Only close modal (optional), but DO NOT update userList automatically
+          // addUserModal.style.display = 'none';
+        } else {
+          addUserMessage.textContent = data.message || 'Failed to create user.';
+        }
+      } catch (err) {
+        addUserMessage.textContent = 'Error creating user: ' + err.message;
+      }
+    });
+
+    // User search result area
+    const userList = document.getElementById('userList');
+    const searchUsername = document.getElementById('searchUsername');
+    const searchIsAdmin = document.getElementById('searchIsAdmin');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    // Function to fetch and render users based on search filters
+    async function fetchUsers() {
+      const username = searchUsername.value.trim();
+      const isAdmin = searchIsAdmin.value.trim().toLowerCase();
+
+      try {
+        const res = await fetch('/api/user-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            Username: username,
+            IsAdmin: isAdmin
+          })
+        });
+        const data = await res.json();
+
+        if (data.ok && Array.isArray(data.users) && data.users.length > 0) {
+          // Build table HTML
+          let html = `<table style="width:100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+  <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Username</th>
+  <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Is Admin</th>
+  <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Created At</th>
+  <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Actions</th>
+</tr>
+
+            </thead>
+            <tbody>`;
+          data.users.forEach(user => {
+  html += `<tr>
+            <td style="border: 1px solid #ccc; padding: 8px;">${user.Username}</td>
+            <td style="border: 1px solid #ccc; padding: 8px;">${user.IsAdmin === "Yes" ? 'Yes' : 'No'}</td>
+            <td style="border: 1px solid #ccc; padding: 8px;">${user.CreatedAt || ''}</td>
+            <td style="border: 1px solid #ccc; padding: 8px;">
+              <button onclick="promptResetPassword('${user.Id}', '${user.Username}')" 
+        style="margin-right: 8px; padding:4px 8px; cursor:pointer;">
+  Reset Password
+</button>
+              <button onclick="deleteUser('${user.Id}', '${user.Username}')" 
+                      style="padding:4px 8px; cursor:pointer; background-color:#ef4444; color:#fff;">
+                Delete User
+              </button>
+            </td>
+          </tr>`;
+});
+          html += '</tbody></table>';
+          userList.innerHTML = html;
+        } else {
+          userList.innerHTML = '<p>No users found.</p>';
+        }
+      } catch (error) {
+        userList.innerHTML = `<p>Network error: ${error.message}</p>`;
+      }
+    }
+
+    // Search: only fetch when Search is clicked
+    searchBtn.addEventListener('click', () => {
+  const username = searchUsername.value.trim();
+  const isAdmin = searchIsAdmin.value.trim();
+
+  // Clear previous error message
+  document.getElementById('searchError').textContent = '';
+
+  if (username === '' && isAdmin === '') {
+    document.getElementById('searchError').textContent = 'Please fill at least one parameter to start the search.';
+    userList.innerHTML = ''; // Clear previous results if any
+    return;
+  }
+
+  fetchUsers(); // Call your existing function only if validation passes
+});
+
+
+    clearBtn.addEventListener('click', () => {
+      searchUsername.value = '';
+      searchIsAdmin.value = '';
+      userList.innerHTML = '';
+    });
+
+    async function resetPassword(userId, username) {
+  if (!confirm(`Reset password for user "${username}" to default 'default123'?`)) return;
+
+  try {
+    const res = await fetch('/api/users/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Id: userId, Password: 'default123' })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`Password for ${username} reset successfully.\nNew password: ${data.password}`);
+    } else {
+      alert(`Failed to reset password: ${data.message || ''}`);
+    }
+  } catch (err) {
+    alert(`Error resetting password: ${err.message}`);
+  }
+}
+
+async function deleteUser(userId, username) {
+  if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
+
+  try {
+    const res = await fetch('/api/users/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Id: userId })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`User "${username}" deleted successfully.`);
+      // Refresh user list by simulating Search button click
+      document.getElementById('searchBtn').click();
+    } else {
+      alert('Failed to delete user.');
+    }
+  } catch (err) {
+    alert(`Error deleting user: ${err.message}`);
+  }
+}
+
+async function promptResetPassword(userId, username) {
+  const newPassword = prompt(`Enter new password for user "${username}":`, 'default123');
+  if (newPassword === null) return; // Cancelled
+
+  if (newPassword.trim() === '') {
+    alert('Password cannot be empty.');
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to reset password for "${username}" to: "${newPassword}"?`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/users/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Id: userId, Password: newPassword })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`Password for ${username} reset successfully.`);
+    } else {
+      alert(`Failed to reset password: ${data.message || ''}`);
+    }
+  } catch (err) {
+    alert(`Error resetting password: ${err.message}`);
+  }
+}
+
+const showAllUsersBtn = document.getElementById('showAllUsersBtn');
+  
+  showAllUsersBtn.addEventListener('click', async () => {
+    // Clear search inputs
+    document.getElementById('searchUsername').value = '';
+    document.getElementById('searchIsAdmin').value = '';
+
+    try {
+      const res = await fetch('/api/users', { method: 'GET' });
+      const data = await res.json();
+      const userList = document.getElementById('userList');
+
+      if (data.ok && Array.isArray(data.users) && data.users.length > 0) {
+        let html = `<table style="width:100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Username</th>
+              <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Is Admin</th>
+              <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Created At</th>
+              <!-- Add other columns/actions if needed -->
+            </tr>
+          </thead>
+          <tbody>`;
+        data.users.forEach(user => {
+          html += `<tr>
+                    <td style="border: 1px solid #ccc; padding: 8px;">${user.Username}</td>
+                    <td style="border: 1px solid #ccc; padding: 8px;">${user.IsAdmin ? 'Yes' : 'No'}</td>
+                    <td style="border: 1px solid #ccc; padding: 8px;">${user.CreatedAt || ''}</td>
+                  </tr>`;
+        });
+        html += '</tbody></table>';
+        userList.innerHTML = html;
+      } else {
+        userList.innerHTML = '<p>No users found.</p>';
+      }
+    } catch (error) {
+      userList.innerHTML = `<p>Error loading users: ${error.message}</p>`;
+    }
+  });
+    // Note: DO NOT automatically call fetchUsers() on create, page load, or clear.
+  </script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Telecom Project Data Center</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="logo-inner.png" />
+</head>
+<body>
+    <main class="wrap">
+      <header style="display:flex; flex-direction:column; align-items:center; margin-top:24px; margin-bottom:12px;">
+        <img src="logo-inner.png" alt="RV Solutions Logo" style="height:60px; width:auto; margin-bottom:8px;">
+        <h1 style="margin:0; font-size:2em; font-weight:600;">Telecom Project Data Center</h1>
+        
+      </header>
+    
+    <!-- Top-right admin/logout controls -->
+  <div style="position: fixed; top: 16px; right: 16px; display:flex; gap:8px; z-index:1000;">
+    <button id="manageUsersBtn" style="display:none; padding:8px 16px; border-radius:6px; border:none; background:#10b981; color:white; font-weight:600; cursor:pointer;">
+      Manage Users
+    </button>
+    <button id="logoutBtn" style="padding:8px 16px; border-radius:6px; border:none; background:#dc2626; color:white; font-weight:600; cursor:pointer;">
+      Logout
+    </button>
+  </div>
+</button>
+
+    <section class="card">
+      <form id="uploadForm" class="form-row">
+        <input type="file" id="csvFile" accept=".csv" required />
+        <label class="inline">
+          <input type="checkbox" id="previewChk" /> Preview
+        </label>
+        <button type="submit">Process</button>
+      </form>
+      <div id="uploadResult" class="result"></div>
+      <div id="previewTable" class="table-wrap" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h2>Export</h2>
+
+      <div class="export-block">
+        <div class="row export-row top">
+          <input type="text" id="week" placeholder="Workdone Week (e.g. W4)" />
+          <input type="text" id="month" placeholder="Booking Month (e.g. Aug-25)" />
+        </div>
+
+        <div class="row export-row bottom">
+          <input type="text" id="weeks" placeholder="Weeks (comma: W4,W5 or 4,5)" />
+          <input type="text" id="months" placeholder="Months (comma: Aug-25,Sep-25 or 2025-08)" />
+          <input type="text" id="years" placeholder="Years (comma: 2024,2025)" />
+        </div>
+
+        <div class="row export-row actions">
+          <label class="inline"><input type="checkbox" id="exportAll" /> All</label>
+          <button id="exportBtn">Export</button>
+        </div>
+
+        <div class="result"><small>Use one or more filters: week+month OR weeks OR months OR years OR check All.</small></div>
+        <div id="exportResult" class="result"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <button id="viewDbBtn">Refresh PMS Data</button>
+      </div>
+      <div id="dbView" class="table-wrap"></div>
+    </section>
+
+    <section class="card admin-only">
+      <h2>Weekly Upload Report</h2>
+      <div class="row">
+        <button id="analysisRefresh">Refresh</button>
+      </div>
+      <div id="analysis" class="table-wrap" aria-live="polite"></div>
+    </section>
+
+    <section class="card admin-only">
+  <h2>Data Management</h2>
+  <form id="searchForm" class="form-row" style="flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+    <input type="text" name="Region" placeholder="Region" />
+    <input type="text" name="Circle" placeholder="Circle" />
+    <input type="text" name="Project Name (As per PMS)" placeholder="Project Name (PMS)" />
+    <input type="text" name="Project Name (As per Project Team)" placeholder="Project Name (Project Team)" style="min-width:170px;" />
+    <input type="text" name="Customer" placeholder="Customer" />
+    <input type="text" name="Customer Qty" placeholder="Customer Qty" />
+    <input type="text" name="Site ID" placeholder="Site ID" />
+    <input type="text" name="Site ID as per Suffex" placeholder="Site ID (Suffex)" />
+    <input type="text" name="SLI Code" placeholder="SLI Code" />
+    <input type="text" name="Customer SLI" placeholder="Customer SLI" />
+    <input type="text" name="Customer Rate" placeholder="Customer Rate" />
+    <input type="text" name="Customer Amount" placeholder="Customer Amount" />
+    <input type="text" name="Date" placeholder="Date (DD-MMM-YYYY)" />
+    <button type="submit" style="flex: 0 0 auto;">Search</button>
+  </form>
+  <div id="adminTable" class="table-wrap"></div>
+</section>
+
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+    const isAdmin = sessionStorage.getItem("isAdmin") === "true";
+
+    const manageUsersBtn = document.getElementById("manageUsersBtn");
+    if (manageUsersBtn) {
+      manageUsersBtn.style.display = isAdmin ? "inline-block" : "none";
+      manageUsersBtn.addEventListener("click", () => {
+        window.location.href = "admin.html";
+      });
+    }
+
+    // Show or hide all elements with class 'admin-only'
+    document.querySelectorAll(".admin-only").forEach(el => {
+      el.style.display = isAdmin ? "" : "none"; // Show if admin, hide if not
+    });
+  });
+  </script>
+</body>
+</html>
