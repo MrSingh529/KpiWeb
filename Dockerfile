@@ -1,17 +1,13 @@
-# =========================
 # 1) Build stage (.NET 9)
-# =========================
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY . .
 
-# If your .csproj is in the repo root, keep this path:
 RUN dotnet restore "./KpiWeb.csproj"
 RUN dotnet publish "./KpiWeb.csproj" -c Release -o /app
 
-# =========================
 # 2) Runtime stage (.NET 9)
-# =========================
+
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build /app .

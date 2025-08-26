@@ -109,7 +109,7 @@ app.MapPost("/api/process-csv", async (HttpRequest req) =>
         dbHeaders.Add("Uploaded At");
 
     // Create/Reset table
-    //EnsureDatabaseAndTable(dbHeaders);
+    EnsureDatabaseAndTable(dbHeaders);
 
     // ---- FETCH ALL DB ROW KEYS FOR DUPLICATE CHECK ----
     var dbRowKeys = new HashSet<string>();
@@ -1075,14 +1075,12 @@ void EnsureDatabaseAndTable(List<string> columns)
     using var conn = new SqliteConnection($"Data Source={DbPath}");
     conn.Open();
     using var cmd = conn.CreateCommand();
-    cmd.CommandText = $"DROP TABLE IF EXISTS {TableName}";
-    cmd.ExecuteNonQuery();
 
     var colDefs = columns.Select(c => $"[{c}] TEXT");
-    cmd.CommandText = $@"CREATE TABLE {TableName} (
+    cmd.CommandText = $@"CREATE TABLE IF NOT EXISTS {TableName} (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         {string.Join(",", colDefs)}
-    )";
+    );";
     cmd.ExecuteNonQuery();
 }
 

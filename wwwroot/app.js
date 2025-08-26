@@ -229,13 +229,17 @@ function renderAdminTable(columns, rows) {
         html += `<td><input data-id="${row.Id}" data-col="${col}" value="${row[col] || ''}" /></td>`;
       }
     });
-    html += `<td><button onclick="updateRow('${row.Id}')">Save</button></td>`;
+    html += `<td>
+      <button onclick="updateRow('${row.Id}')">Save</button>
+      <button onclick="deleteRow('${row.Id}')" style="margin-left:6px;background:#dc2626;color:white;">Delete</button>
+    </td>`;
     html += '</tr>';
   });
 
   html += '</tbody></table>';
   document.getElementById('adminTable').innerHTML = html;
 }
+
 
 
 // Update record
