@@ -202,19 +202,20 @@ app.MapPost("/api/process-csv", async (HttpRequest req) =>
         var partnerName = Get("Partner Name");
         var partnerSLI = Get("Partner SLI");
         if (workDoneBy == "Partner")
-        {
-            if (partnerName.Equals("NA", StringComparison.OrdinalIgnoreCase))
-                rowErrs.Add("Partner Name cannot be NA for Partner.");
-            if (partnerSLI.Equals("NA", StringComparison.OrdinalIgnoreCase))
-                rowErrs.Add("Partner SLI cannot be NA for Partner.");
-        }
-        else if (workDoneBy == "RVS")
-        {
-            if (!partnerName.Equals("NA", StringComparison.OrdinalIgnoreCase))
-                rowErrs.Add("Partner Name must be NA for RVS.");
-            if (!partnerSLI.Equals("NA", StringComparison.OrdinalIgnoreCase))
-                rowErrs.Add("Partner SLI must be NA for RVS.");
-        }
+{
+    if (IsInvalidPartnerValue(partnerName))
+        rowErrs.Add("Partner Name cannot be NA or its variations (e.g., N/A, Not Applicable) for Partner.");
+    if (IsInvalidPartnerValue(partnerSLI))
+        rowErrs.Add("Partner SLI cannot be NA or its variations (e.g., N/A, Not Applicable) for Partner.");
+}
+else if (workDoneBy == "RVS")
+{
+    if (partnerName != "NA")
+        rowErrs.Add("Partner Name must be exactly 'NA' (case-sensitive, no spaces) for RVS.");
+    if (partnerSLI != "NA")
+        rowErrs.Add("Partner SLI must be exactly 'NA' (case-sensitive, no spaces) for RVS.");
+}
+
 
         if (!int.TryParse(Get("Customer Qty"), out int custQty))
             rowErrs.Add("Customer Qty must be digits.");
@@ -255,7 +256,10 @@ app.MapPost("/api/process-csv", async (HttpRequest req) =>
 
         else
         {
-            (string workWeek, string bookingMonth) = GetBusinessWorkdoneWeekAndBookingMonth(dateVal);
+            DateTime istNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                   TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"));
+
+            (string workWeek, string bookingMonth) = GetBusinessWorkdoneWeekAndBookingMonth(istNow);
             dict["Workdone Week"] = workWeek;
             dict["Booking Month"] = bookingMonth;
         }
@@ -1044,25 +1048,43 @@ var expectedCircles = (circlesByRegion ?? new Dictionary<string, HashSet<string>
 
 (string, string) GetBusinessWorkdoneWeekAndBookingMonth(DateTime date)
 {
-    int day = date.Day, month = date.Month, year = date.Year, week = 0;
-    if (month == 9 && year == 2025)
+    int year = date.Year;
+    int month = date.Month;
+
+    // The "business month" starts on the 2nd of this month
+    DateTime start = new DateTime(year, month, 2);
+
+    // If the given date is before the 2nd → it belongs to the previous month cycle
+    if (date < start)
     {
-        if (day >= 1 && day <= 4) week = 1;
-        else if (day >= 5 && day <= 11) week = 2;
-        else if (day >= 12 && day <= 18) week = 3;
-        else if (day >= 19 && day <= 25) week = 4;
-        else week = 5;
+        // shift one month back and recompute
+        return GetBusinessWorkdoneWeekAndBookingMonth(new DateTime(year, month, 1).AddDays(-1));
     }
-    else
+
+    // figure out week index starting from 2nd
+    int weekIndex = 1;
+    DateTime weekStart = start;
+    DateTime weekEnd = weekStart.AddDays(6);
+
+    while (date > weekEnd)
     {
-        if (day >= 1 && day <= 7) week = 1;
-        else if (day >= 8 && day <= 14) week = 2;
-        else if (day >= 15 && day <= 21) week = 3;
-        else if (day >= 22 && day <= 28) week = 4;
-        else week = 5;
+        weekIndex++;
+        weekStart = weekEnd.AddDays(1);
+        weekEnd = weekStart.AddDays(6);
     }
-    return ($"W{week}", date.ToString("MMM-yy", CultureInfo.InvariantCulture));
+
+    // Ensure the last week ends at the 1st of next month
+    DateTime nextMonthStart = new DateTime(year, month, 1).AddMonths(1);
+    if (weekEnd >= nextMonthStart)
+        weekEnd = nextMonthStart;
+
+    // Booking Month is always from the *starting month* (the "2nd month")
+    string workWeek = $"W{weekIndex}";
+    string bookingMonth = start.ToString("MMM-yy", CultureInfo.InvariantCulture);
+
+    return (workWeek, bookingMonth);
 }
+
 
 EnsureUserTable();
 EnsureAdminUser();
@@ -1215,6 +1237,24 @@ void EnsureAdminUser()
     }
 }
 
+
+bool IsInvalidPartnerValue(string val)
+{
+    if (string.IsNullOrWhiteSpace(val)) return false;
+
+    // Normalize: lowercase + remove punctuation + remove spaces
+    var normalized = new string(val.ToLowerInvariant()
+                                   .Where(c => !char.IsWhiteSpace(c) && !char.IsPunctuation(c))
+                                   .ToArray());
+
+    // Block all common variants after normalization
+    return normalized == "na" || 
+           normalized == "napplicable" || 
+           normalized == "notapplicable";
+}
+
+
+
 List<string> ValidateKpiRow(Dictionary<string, string> dict, HashSet<string> existingKeys, string? currentId = null)
 {
     var errors = new List<string>();
@@ -1261,19 +1301,20 @@ List<string> ValidateKpiRow(Dictionary<string, string> dict, HashSet<string> exi
     var partnerSLI = Get("Partner SLI");
 
     if (workDoneBy == "Partner")
-    {
-        if (partnerName.Equals("NA", StringComparison.OrdinalIgnoreCase))
-            errors.Add("Partner Name cannot be NA for Partner.");
-        if (partnerSLI.Equals("NA", StringComparison.OrdinalIgnoreCase))
-            errors.Add("Partner SLI cannot be NA for Partner.");
-    }
-    else if (workDoneBy == "RVS")
-    {
-        if (!partnerName.Equals("NA", StringComparison.OrdinalIgnoreCase))
-            errors.Add("Partner Name must be NA for RVS.");
-        if (!partnerSLI.Equals("NA", StringComparison.OrdinalIgnoreCase))
-            errors.Add("Partner SLI must be NA for RVS.");
-    }
+{
+    if (IsInvalidPartnerValue(partnerName))
+        errors.Add("Partner Name cannot be NA or its variations (e.g., N/A, Not Applicable) for Partner.");
+    if (IsInvalidPartnerValue(partnerSLI))
+        errors.Add("Partner SLI cannot be NA or its variations (e.g., N/A, Not Applicable) for Partner.");
+}
+else if (workDoneBy == "RVS")
+{
+    if (partnerName != "NA")
+        errors.Add("Partner Name must be exactly 'NA' (case-sensitive, no spaces) for RVS.");
+    if (partnerSLI != "NA")
+        errors.Add("Partner SLI must be exactly 'NA' (case-sensitive, no spaces) for RVS.");
+}
+
 
     if (!int.TryParse(Get("Customer Qty"), out int custQty))
         errors.Add("Customer Qty must be digits.");
